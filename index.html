@@ -6,7 +6,7 @@
   <title>Generador de Notas de Venta - Choco Jelly Sandy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -53,14 +53,19 @@
           <input type="text" id="inputCliente" placeholder="Nombre y apellido del cliente" />
         </div>
 
-        <div class="form-group full">
-          <label for="inputTelefono">Teléfono Cliente</label>
-          <input type="text" id="inputTelefono" placeholder="Ej. 0991234567" />
+        <div class="form-group">
+          <label for="inputTelefono">Teléfono Cliente (en nota)</label>
+          <input type="tel" id="inputTelefono" placeholder="Ej. 0991234567" />
+        </div>
+
+        <div class="form-group">
+          <label for="inputWhatsapp">WhatsApp de Envío</label>
+          <input type="tel" id="inputWhatsapp" placeholder="Ej. 0991234567" />
         </div>
       </div>
 
       <div class="section-title">
-        <span>Detalle de Postres (Máx. 5 filas)</span>
+        <span>Detalle de Postres</span>
         <span class="hint-text">Cant. / Descripción / P. Unit</span>
       </div>
 
@@ -91,13 +96,22 @@
       </label>
 
       <div class="actions-stack">
+        <div class="whatsapp-action-row">
+          <button type="button" class="btn-whatsapp" id="btnSaveWa">Guardar y Enviar por WhatsApp</button>
+          <select id="selectWaFormat" class="wa-format-select" title="Formato del archivo para WhatsApp">
+            <option value="png">PNG</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
+
         <button type="button" class="btn-primary" id="btnSavePng">Guardar en Sheets y Descargar PNG</button>
         <button type="button" class="btn-secondary" id="btnSavePdf">Guardar en Sheets y Descargar PDF</button>
 
-        <div class="secondary-row">
+        <div class="secondary-row-four">
+          <button type="button" class="btn-ghost" id="btnOnlyWa">Solo WhatsApp</button>
           <button type="button" class="btn-ghost" id="btnOnlyPng">Solo PNG</button>
           <button type="button" class="btn-ghost" id="btnOnlyPdf">Solo PDF</button>
-          <button type="button" class="btn-ghost" id="btnReset">Nueva Nota</button>
+          <button type="button" class="btn-ghost" id="btnReset">Nueva</button>
         </div>
       </div>
 
@@ -108,23 +122,87 @@
       <div class="preview-label">Vista Previa Exacta (Listo para WhatsApp / Impresión)</div>
 
       <div id="nota-canvas">
-        <div id="prevFecha" class="overlay-field field-fecha"></div>
-        <div id="prevNota" class="overlay-field field-nota">000065</div>
-        <div id="prevCliente" class="overlay-field field-cliente"></div>
-        <div id="prevTelefono" class="overlay-field field-telefono"></div>
+        <img src="assets/encaje.png" alt="" class="decor-lace-tl" />
+        <img src="assets/encaje.png" alt="" class="decor-lace-tr" />
+        <img src="assets/encaje.png" alt="" class="decor-lace-bl" />
+        <img src="assets/chocolates.png" alt="" class="decor-chocolates" />
 
-        <div id="prevRowsContainer" class="overlay-rows"></div>
+        <div class="dotted-frame"></div>
 
-        <div id="prevSubtotal" class="overlay-total total-subtotal">$ 0.00</div>
-        <div id="prevDescuento" class="overlay-total total-descuento">$ 0.00</div>
-        <div id="prevEnvio" class="overlay-total total-envio">$ 0.00</div>
-        <div id="prevTotal" class="overlay-total total-grand">$ 0.00</div>
+        <div class="receipt-content">
+          <div class="logo-header">
+            <img src="assets/logo.png" alt="Choco Jelly Sandy" class="brand-logo" />
+          </div>
 
-        <img id="prevFirmaImg" class="overlay-firma" alt="Firma Autorizada" />
+          <div class="nota-title">NOTA DE VENTA</div>
+
+          <div class="business-info">
+            <div>Choco Jelly Sandy</div>
+            <div>Dirección: Niagara Mirador - Latacunga</div>
+            <div>Celular: 0984710660</div>
+            <div>Email: salv_12_@outlook.com</div>
+            <div>Instagram: @choco_jelly_sandy</div>
+          </div>
+
+          <div class="client-fields">
+            <div class="field-line">
+              <span class="lbl">Fecha:</span>
+              <span class="val val-fecha" id="prevFecha"></span>
+            </div>
+            <div class="field-line">
+              <span class="lbl">N° de Nota:</span>
+              <span class="val val-nota" id="prevNota">000065</span>
+            </div>
+            <div class="field-line">
+              <span class="lbl">Cliente:</span>
+              <span class="val val-cliente" id="prevCliente"></span>
+            </div>
+            <div class="field-line">
+              <span class="lbl">Teléfono Cliente:</span>
+              <span class="val val-telefono" id="prevTelefono"></span>
+            </div>
+          </div>
+
+          <table class="receipt-table">
+            <thead>
+              <tr>
+                <th class="col-cant">CANT.</th>
+                <th class="col-desc th-center">DESCRIPCIÓN DEL POSTRE</th>
+                <th class="col-unit th-center">P. UNITARIO</th>
+                <th class="col-tot th-center">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody id="prevTableBody"></tbody>
+          </table>
+
+          <div class="totals-wrapper">
+            <div class="totals-grid">
+              <div class="tot-lbl">SUBTOTAL</div>
+              <div class="tot-val" id="prevSubtotal">$ 0.00</div>
+
+              <div class="tot-lbl">DESCUENTO</div>
+              <div class="tot-val" id="prevDescuento">$ 0.00</div>
+
+              <div class="tot-lbl">ENVÍO</div>
+              <div class="tot-val" id="prevEnvio">$ 0.00</div>
+
+              <div class="tot-lbl grand">TOTAL</div>
+              <div class="tot-val grand" id="prevTotal">$ 0.00</div>
+            </div>
+          </div>
+
+          <div class="receipt-footer">
+            <div class="thanks-text">¡Gracias por endulzar tu día con nosotros!</div>
+            <div class="signature-box">
+              <img id="prevFirmaImg" class="signature-img" alt="Firma Autorizada" />
+              <div class="signature-line">Firma Autorizada</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </div>
 
-  <script src="js/script.js"></script>
+  <script src="js/script.js" charset="UTF-8"></script>
 </body>
 </html>

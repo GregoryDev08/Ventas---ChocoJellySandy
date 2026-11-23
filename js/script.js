@@ -1,8 +1,8 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlLTBUW6NS324pI-awMIWvzx7LTzmWLRlkZdjiZrG9u-2m7lM96-o-ItBOf3Htw-ecwQ/exec";
 
-const MAX_ITEMS = 5; // La plantilla visual tiene 5 filas dibujadas
 let activePin = "";
 let signatureLoaded = false;
+let whatsappManuallyEdited = false;
 
 let items = [
   { cant: 1, desc: "", unit: "" },
@@ -19,10 +19,12 @@ const inputNota = document.getElementById("inputNota");
 const inputFecha = document.getElementById("inputFecha");
 const inputCliente = document.getElementById("inputCliente");
 const inputTelefono = document.getElementById("inputTelefono");
+const inputWhatsapp = document.getElementById("inputWhatsapp");
 const inputDescuento = document.getElementById("inputDescuento");
 const selectDescuentoTipo = document.getElementById("selectDescuentoTipo");
 const inputEnvio = document.getElementById("inputEnvio");
 const checkFirma = document.getElementById("checkFirma");
+const selectWaFormat = document.getElementById("selectWaFormat");
 const itemsList = document.getElementById("itemsList");
 const btnAddItem = document.getElementById("btnAddItem");
 const statusMsg = document.getElementById("statusMsg");
@@ -106,6 +108,17 @@ pinInput.addEventListener("keydown", (e) => {
 });
 btnLockApp.addEventListener("click", lockSystem);
 
+inputTelefono.addEventListener("input", () => {
+  if (!whatsappManuallyEdited) {
+    inputWhatsapp.value = inputTelefono.value;
+  }
+  updatePreview();
+});
+
+inputWhatsapp.addEventListener("input", () => {
+  whatsappManuallyEdited = inputWhatsapp.value.trim().length > 0;
+});
+
 function setTodayDate() {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -124,6 +137,18 @@ function formatMoney(val) {
   return `$ ${Number(val || 0).toFixed(2)}`;
 }
 
+function normalizeWhatsAppPhone(raw) {
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0") && digits.length === 10) {
+    return "593" + digits.slice(1);
+  }
+  if (digits.startsWith("9") && digits.length === 9) {
+    return "593" + digits;
+  }
+  return digits;
+}
+
 function renderFormItems() {
   itemsList.innerHTML = "";
   items.forEach((item, idx) => {
@@ -137,8 +162,6 @@ function renderFormItems() {
     `;
     itemsList.appendChild(row);
   });
-
-  btnAddItem.disabled = items.length >= MAX_ITEMS;
 
   itemsList.querySelectorAll("input").forEach((inp) => {
     inp.addEventListener("input", (e) => {
@@ -204,30 +227,29 @@ function updatePreview() {
 
   const { validRows, subtotal, descuento, envio, total } = calculateTotals();
 
-  const rowsContainer = document.getElementById("prevRowsContainer");
-  rowsContainer.innerHTML = "";
+  const tbody = document.getElementById("prevTableBody");
+  tbody.innerHTML = "";
 
-  for (let i = 0; i < MAX_ITEMS; i++) {
+  const totalRows = Math.max(5, validRows.length);
+  for (let i = 0; i < totalRows; i++) {
     const r = validRows[i];
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "overlay-row";
-
+    const tr = document.createElement("tr");
     if (r) {
-      rowDiv.innerHTML = `
-        <div class="cell-cant">${r.cant}</div>
-        <div class="cell-desc">${r.desc}</div>
-        <div class="cell-unit">${r.unit > 0 || r.cant ? formatMoney(r.unit) : ""}</div>
-        <div class="cell-tot">${r.total > 0 || r.cant ? formatMoney(r.total) : ""}</div>
+      tr.innerHTML = `
+        <td class="col-cant">${r.cant}</td>
+        <td class="col-desc">${r.desc}</td>
+        <td class="col-unit">${r.unit > 0 || r.cant ? formatMoney(r.unit) : ""}</td>
+        <td class="col-tot">${r.total > 0 || r.cant ? formatMoney(r.total) : ""}</td>
       `;
     } else {
-      rowDiv.innerHTML = `
-        <div class="cell-cant"></div>
-        <div class="cell-desc"></div>
-        <div class="cell-unit"></div>
-        <div class="cell-tot"></div>
+      tr.innerHTML = `
+        <td class="col-cant"></td>
+        <td class="col-desc"></td>
+        <td class="col-unit"></td>
+        <td class="col-tot"></td>
       `;
     }
-    rowsContainer.appendChild(rowDiv);
+    tbody.appendChild(tr);
   }
 
   document.getElementById("prevSubtotal").textContent = formatMoney(subtotal);
@@ -294,7 +316,7 @@ async function captureReceiptCanvas() {
   return await html2canvas(node, {
     scale: 2.5,
     useCORS: true,
-    backgroundColor: "#f9f5eb"
+    backgroundColor: "#faf6ec"
   });
 }
 
@@ -307,30 +329,135 @@ function getFileName(ext) {
   return `Nota_Venta_${num}_${clientSlug}.${ext}`;
 }
 
-async function downloadPNG() {
-  const canvas = await captureReceiptCanvas();
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.download = getFileName("png");
-  link.href = canvas.toDataURL("image/png");
+  link.download = filename;
+  link.href = url;
   link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-async function downloadPDF() {
+async function createPngBlob() {
+  const canvas = await captureReceiptCanvas();
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+async function createPdfBlob() {
+  const node = document.getElementById("nota-canvas");
   const canvas = await captureReceiptCanvas();
   const imgData = canvas.toDataURL("image/png");
   const { jsPDF } = window.jspdf;
+  const w = node.offsetWidth;
+  const h = node.offsetHeight;
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "px",
-    format: [800, 800]
+    format: [w, h]
   });
-  pdf.addImage(imgData, "PNG", 0, 0, 800, 800);
-  pdf.save(getFileName("pdf"));
+  pdf.addImage(imgData, "PNG", 0, 0, w, h);
+  return pdf.output("blob");
+}
+
+async function downloadPNG() {
+  const blob = await createPngBlob();
+  triggerBlobDownload(blob, getFileName("png"));
+}
+
+async function downloadPDF() {
+  const blob = await createPdfBlob();
+  triggerBlobDownload(blob, getFileName("pdf"));
+}
+
+function buildWhatsAppMessage(noteNumber) {
+  const clientName = inputCliente.value.trim();
+  const greeting = clientName ? `¡Hola *${clientName}*!` : "¡Hola!";
+  const dateStr = formatDateDisplay(inputFecha.value);
+  const { total } = calculateTotals();
+
+  return [
+    `${greeting} \u{1F36B}\u{1F353}\u{2728}`,
+    `Muchas gracias por tu compra en *Choco Jelly Sandy*. ¡Ha sido un gusto endulzar tu día!`,
+    ``,
+    `\u{1F9FE} *Nota de Venta N°:* ${noteNumber}`,
+    `\u{1F4C5} *Fecha:* ${dateStr}`,
+    `\u{1F4B0} *Total:* $${total.toFixed(2)}`,
+    ``,
+    `Adjunto te enviamos tu comprobante de compra. ¡Esperamos verte pronto! \u{1F495}`
+  ].join("\n");
+}
+
+async function sendViaWhatsApp(shouldSaveFirst) {
+  const rawPhone = inputWhatsapp.value.trim() || inputTelefono.value.trim();
+  const cleanPhone = normalizeWhatsAppPhone(rawPhone);
+
+  if (!cleanPhone || cleanPhone.length < 10) {
+    statusMsg.style.color = "#c92a5b";
+    statusMsg.textContent = "Ingresa un número de WhatsApp válido antes de enviar.";
+    inputWhatsapp.focus();
+    return;
+  }
+
+  const btnWa = document.getElementById("btnSaveWa");
+  const btnPng = document.getElementById("btnSavePng");
+  const btnPdf = document.getElementById("btnSavePdf");
+  btnWa.disabled = true;
+  btnPng.disabled = true;
+  btnPdf.disabled = true;
+
+  try {
+    const currentNoteNumber = (inputNota.value.trim() || "000065").padStart(6, "0");
+    const format = selectWaFormat.value;
+    const filename = getFileName(format);
+    const message = buildWhatsAppMessage(currentNoteNumber);
+
+    let fileBlob;
+    let copiedToClipboard = false;
+
+    if (format === "png") {
+      fileBlob = await createPngBlob();
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "image/png": fileBlob })
+          ]);
+          copiedToClipboard = true;
+        }
+      } catch (e) {
+        copiedToClipboard = false;
+      }
+    } else {
+      fileBlob = await createPdfBlob();
+    }
+
+    if (shouldSaveFirst) {
+      await saveToGoogleSheets();
+      updatePreview();
+    }
+
+    triggerBlobDownload(fileBlob, filename);
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;    window.open(waUrl, "_blank");
+
+    statusMsg.style.color = "#155724";
+    statusMsg.textContent = copiedToClipboard
+      ? `✓ WhatsApp abierto y PNG copiado al portapapeles: presiona Ctrl+V en el chat para pegarlo.`
+      : `✓ WhatsApp abierto y ${format.toUpperCase()} descargado (${filename}) listo para adjuntar.`;
+  } catch (err) {
+    statusMsg.style.color = "#c92a5b";
+    statusMsg.textContent = "Error: " + err.message;
+  } finally {
+    btnWa.disabled = false;
+    btnPng.disabled = false;
+    btnPdf.disabled = false;
+  }
 }
 
 async function handleSaveAndExport(format) {
+  const btnWa = document.getElementById("btnSaveWa");
   const btnPng = document.getElementById("btnSavePng");
   const btnPdf = document.getElementById("btnSavePdf");
+  btnWa.disabled = true;
   btnPng.disabled = true;
   btnPdf.disabled = true;
 
@@ -343,18 +470,19 @@ async function handleSaveAndExport(format) {
     statusMsg.style.color = "#c92a5b";
     statusMsg.textContent = "Error: " + err.message;
   } finally {
+    btnWa.disabled = false;
     btnPng.disabled = false;
     btnPdf.disabled = false;
   }
 }
 
 btnAddItem.addEventListener("click", () => {
-  if (items.length < MAX_ITEMS) {
-    items.push({ cant: 1, desc: "", unit: "" });
-    renderFormItems();
-  }
+  items.push({ cant: 1, desc: "", unit: "" });
+  renderFormItems();
 });
 
+document.getElementById("btnSaveWa").addEventListener("click", () => sendViaWhatsApp(true));
+document.getElementById("btnOnlyWa").addEventListener("click", () => sendViaWhatsApp(false));
 document.getElementById("btnSavePng").addEventListener("click", () => handleSaveAndExport("png"));
 document.getElementById("btnSavePdf").addEventListener("click", () => handleSaveAndExport("pdf"));
 document.getElementById("btnOnlyPng").addEventListener("click", downloadPNG);
@@ -364,6 +492,8 @@ document.getElementById("btnRefreshNum").addEventListener("click", () => verifyP
 document.getElementById("btnReset").addEventListener("click", () => {
   inputCliente.value = "";
   inputTelefono.value = "";
+  inputWhatsapp.value = "";
+  whatsappManuallyEdited = false;
   inputDescuento.value = "0";
   inputEnvio.value = "0";
   items = [{ cant: 1, desc: "", unit: "" }, { cant: "", desc: "", unit: "" }];
@@ -373,7 +503,7 @@ document.getElementById("btnReset").addEventListener("click", () => {
   verifyPinAndSync(activePin);
 });
 
-[inputNota, inputFecha, inputCliente, inputTelefono, inputDescuento, selectDescuentoTipo, inputEnvio, checkFirma].forEach((el) => {
+[inputNota, inputFecha, inputCliente, inputDescuento, selectDescuentoTipo, inputEnvio, checkFirma].forEach((el) => {
   el.addEventListener("input", updatePreview);
   el.addEventListener("change", updatePreview);
 });
