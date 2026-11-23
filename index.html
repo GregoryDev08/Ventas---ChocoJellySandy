@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Notas de Venta - Choco Jelly Sandy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #d84b7e;
+      --primary-dark: #b93565;
+      --bg-app: #f4eff2;
+      --card-bg: #ffffff;
+      --border: #e5dce0;
+      --text-main: #231f20;
+      --text-muted: #6b6367;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .app-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 480px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .app-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* PANEL IZQUIERDO: FORMULARIO */
+    .editor-panel {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+
+    .panel-header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .sync-badge {
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+      background: #fff3cd;
+      color: #856404;
+      white-space: nowrap;
+    }
+
+    .sync-badge.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .nota-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-icon {
+      padding: 0 12px;
+      border: 1.5px solid var(--border);
+      background: #faf7f9;
+      border-radius: 9px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .btn-icon:hover {
+      background: #f2e8ed;
+    }
+
+    .section-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      margin: 16px 0 10px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* LISTA DE PRODUCTOS */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 64px 1fr 90px 34px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .item-row input {
+      padding: 8px 9px;
+      font-size: 0.9rem;
+    }
+
+    .btn-remove {
+      height: 36px;
+      border: none;
+      background: #fde8ee;
+      color: #c92a5b;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .btn-remove:hover {
+      background: #fbd0dc;
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 9px;
+      background: #fdf2f6;
+      color: var(--primary-dark);
+      border: 1.5px dashed var(--primary);
+      border-radius: 9px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .btn-add:hover {
+      background: #fbe4ec;
+    }
+
+    .discount-box {
+      display: grid;
+      grid-template-columns: 1fr 75px;
+      gap: 6px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 0 18px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .checkbox-row input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--primary);
+    }
+
+    /* BOTONES DE ACCIÓN */
+    .actions-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      padding: 13px 16px;
+      border: none;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .btn-secondary {
+      padding: 12px 16px;
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--primary-dark);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #fdf2f6;
+    }
+
+    .secondary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn-ghost {
+      padding: 9px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #faf8f9;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover {
+      background: #f0eaed;
+      color: var(--text-main);
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      text-align: center;
+      font-weight: 600;
+      min-height: 20px;
+    }
+
+    /* PANEL DERECHO: VISTA PREVIA EXACTA DE LA NOTA */
+    .preview-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #e6dde1;
+      padding: 24px;
+      border-radius: 16px;
+      overflow-x: auto;
+    }
+
+    .preview-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #5c5357;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* LIENZO DE NOTA DE VENTA (800 x 840 px) */
+    #nota-canvas {
+      width: 800px;
+      height: 840px;
+      position: relative;
+      background-color: #f9f5eb;
+      background-image: url('assets/fondo.png');
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+      color: #181818;
+      font-family: 'Outfit', sans-serif;
+      padding: 185px 62px 42px 62px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .nota-title {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-left: 45px;
+      margin-bottom: 4px;
+      color: #1a1a1a;
+    }
+
+    .business-info {
+      font-size: 15.5px;
+      line-height: 1.28;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #1e1e1e;
+    }
+
+    .client-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 14px;
+      font-size: 15.5px;
+      font-weight: 600;
+    }
+
+    .field-line {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .field-line span.lbl {
+      white-space: nowrap;
+    }
+
+    .field-line span.val {
+      border-bottom: 1.5px solid #222;
+      padding: 0 8px 1px 6px;
+      font-weight: 500;
+      min-height: 20px;
+      color: #111;
+    }
+
+    .val-fecha { width: 175px; }
+    .val-nota { width: 140px; font-weight: 700 !important; }
+    .val-cliente { flex: 1; }
+    .val-telefono { width: 225px; }
+
+    /* TABLA DE PRODUCTOS */
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    .receipt-table th {
+      background-color: #f9d5d8;
+      border: 1.5px solid #222;
+      padding: 6px 8px;
+      font-weight: 700;
+      font-size: 15.5px;
+      text-align: center;
+      color: #181818;
+    }
+
+    .receipt-table td {
+      border: 1.5px solid #222;
+      padding: 5px 10px;
+      height: 31px;
+      font-size: 14.5px;
+      font-weight: 500;
+      background-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .col-cant { width: 78px; text-align: center; }
+    .col-desc { text-align: left; }
+    .col-unit { width: 132px; text-align: right; }
+    .col-tot  { width: 112px; text-align: right; }
+
+    /* BLOQUE DE TOTALES */
+    .totals-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .totals-grid {
+      display: grid;
+      grid-template-columns: 132px 112px;
+      align-items: center;
+      row-gap: 5px;
+    }
+
+    .tot-lbl {
+      text-align: right;
+      padding-right: 12px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .tot-val {
+      border-bottom: 1.5px solid #222;
+      text-align: right;
+      padding: 1px 8px;
+      font-size: 15.5px;
+      font-weight: 600;
+      min-height: 23px;
+    }
+
+    .tot-lbl.grand {
+      font-size: 21px;
+      font-weight: 800;
+      padding-top: 4px;
+    }
+
+    .tot-val.grand {
+      font-size: 19px;
+      font-weight: 800;
+      padding-top: 4px;
+    }
+
+    /* PIE DE NOTA Y FIRMA */
+    .receipt-footer {
+      text-align: center;
+      margin-top: 8px;
+      position: relative;
+    }
+
+    .thanks-text {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 26px;
+      margin-left: 55px;
+    }
+
+    .signature-box {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      margin-left: 55px;
+    }
+
+    .signature-img {
+      height: 62px;
+      object-fit: contain;
+      margin-bottom: -14px;
+      position: relative;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .signature-line {
+      width: 245px;
+      border-top: 1.5px solid #222;
+      padding-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- FORMULARIO DE CAPTURA -->
+  <section class="editor-panel">
+    <div class="panel-header">
+      <h1>Choco Jelly Sandy</h1>
+      <span id="syncStatus" class="sync-badge">Modo Local</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="inputNota">N° de Nota</label>
+        <div class="nota-row">
+          <input type="text" id="inputNota" value="000065" />
+          <button type="button" class="btn-icon" id="btnRefreshNum" title="Sincronizar siguiente número desde Google Sheets">↻</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputFecha">Fecha</label>
+        <input type="date" id="inputFecha" />
+      </div>
+
+      <div class="form-group full">
+        <label for="inputCliente">Cliente</label>
+        <input type="text" id="inputCliente" placeholder="Nombre y apellido del cliente" />
+      </div>
+
+      <div class="form-group full">
+        <label for="inputTelefono">Teléfono Cliente</label>
+        <input type="text" id="inputTelefono" placeholder="Ej. 0991234567" />
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>Detalle de Postres</span>
+      <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">Cant. / Descripción / P. Unit</span>
+    </div>
+
+    <div id="itemsList" class="items-list"></div>
+    <button type="button" class="btn-add" id="btnAddItem">+ Agregar otro postre</button>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="inputDescuento">Descuento</label>
+        <div class="discount-box">
+          <input type="number" id="inputDescuento" min="0" step="0.01" value="0" />
+          <select id="selectDescuentoTipo">
+            <option value="$">$</option>
+            <option value="%">%</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputEnvio">Envío ($)</label>
+        <input type="number" id="inputEnvio" min="0" step="0.01" value="0" />
+      </div>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="checkFirma" checked />
+      <span>Incluir Firma Autorizada en la nota</span>
+    </label>
+
+    <div class="actions-stack">
+      <button type="button" class="btn-primary" id="btnSavePng">Guardar en Sheets y Descargar PNG</button>
+      <button type="button" class="btn-secondary" id="btnSavePdf">Guardar en Sheets y Descargar PDF</button>
+
+      <div class="secondary-row">
+        <button type="button" class="btn-ghost" id="btnOnlyPng">Solo PNG</button>
+        <button type="button" class="btn-ghost" id="btnOnlyPdf">Solo PDF</button>
+        <button type="button" class="btn-ghost" id="btnReset">Nueva Nota</button>
+      </div>
+    </div>
+
+    <div id="statusMsg" class="status-msg"></div>
+  </section>
+
+  <!-- VISTA PREVIA EN TIEMPO REAL -->
+  <section class="preview-wrapper">
+    <div class="preview-label">Vista Previa Exacta (Listo para WhatsApp / Impresión)</div>
+
+    <div id="nota-canvas">
+      <div>
+        <div class="nota-title">NOTA DE VENTA</div>
+
+        <div class="business-info">
+          <div>Choco Jelly Sandy</div>
+          <div>Dirección: Niagara Mirador - Latacunga</div>
+          <div>Celular: 0984710660</div>
+          <div>Email: salv_12_@outlook.com</div>
+          <div>Instagram: @choco_jelly_sandy</div>
+        </div>
+
+        <div class="client-fields">
+          <div class="field-line">
+            <span class="lbl">Fecha:</span>
+            <span class="val val-fecha" id="prevFecha"></span>
+          </div>
+          <div class="field-line">
+            <span class="lbl">N° de Nota:</span>
+            <span class="val val-nota" id="prevNota">000065</span>
+          </div>
+          <div class="field-line">
+            <span class="lbl">Cliente:</span>
+            <span class="val val-cliente" id="prevCliente"></span>
+          </div>
+          <div class="field-line">
+            <span class="lbl">Teléfono Cliente:</span>
+            <span class="val val-telefono" id="prevTelefono"></span>
+          </div>
+        </div>
+
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th class="col-cant">CANT.</th>
+              <th class="col-desc" style="text-align: center;">DESCRIPCIÓN DEL POSTRE</th>
+              <th class="col-unit" style="text-align: center;">P. UNITARIO</th>
+              <th class="col-tot" style="text-align: center;">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody id="prevTableBody"></tbody>
+        </table>
+
+        <div class="totals-wrapper">
+          <div class="totals-grid">
+            <div class="tot-lbl">SUBTOTAL</div>
+            <div class="tot-val" id="prevSubtotal">$ 0.00</div>
+
+            <div class="tot-lbl">DESCUENTO</div>
+            <div class="tot-val" id="prevDescuento">$ 0.00</div>
+
+            <div class="tot-lbl">ENVÍO</div>
+            <div class="tot-val" id="prevEnvio">$ 0.00</div>
+
+            <div class="tot-lbl grand">TOTAL</div>
+            <div class="tot-val grand" id="prevTotal">$ 0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipt-footer">
+        <div class="thanks-text">¡Gracias por endulzar tu día con nosotros!</div>
+        <div class="signature-box">
+          <img src="assets/firma.png" alt="Firma" class="signature-img" id="prevFirmaImg" onerror="this.style.visibility='hidden'" />
+          <div class="signature-line">Firma Autorizada</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // =========================================================================
+  // CONFIGURACIÓN: Pega aquí la URL de tu implementación de Google Apps Script
+  // =========================================================================
+  const APPS_SCRIPT_URL = "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT";
+
+  const isSheetsConfigured = () =>
+    APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith("https://script.google.com/");
+
+  // Estado inicial
+  let items = [
+    { cant: 1, desc: "", unit: "" },
+    { cant: "", desc: "", unit: "" }
+  ];
+
+  // Elementos del DOM
+  const inputNota = document.getElementById("inputNota");
+  const inputFecha = document.getElementById("inputFecha");
+  const inputCliente = document.getElementById("inputCliente");
+  const inputTelefono = document.getElementById("inputTelefono");
+  const inputDescuento = document.getElementById("inputDescuento");
+  const selectDescuentoTipo = document.getElementById("selectDescuentoTipo");
+  const inputEnvio = document.getElementById("inputEnvio");
+  const checkFirma = document.getElementById("checkFirma");
+  const itemsList = document.getElementById("itemsList");
+  const statusMsg = document.getElementById("statusMsg");
+  const syncStatus = document.getElementById("syncStatus");
+
+  // Inicializar fecha de hoy
+  function setTodayDate() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    inputFecha.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  function formatDateDisplay(isoDate) {
+    if (!isoDate) return "";
+    const [y, m, d] = isoDate.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function formatMoney(val) {
+    return `$ ${Number(val || 0).toFixed(2)}`;
+  }
+
+  // Renderizar filas editables del formulario
+  function renderFormItems() {
+    itemsList.innerHTML = "";
+    items.forEach((item, idx) => {
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML = `
+        <input type="number" min="1" placeholder="Cant" value="${item.cant}" data-idx="${idx}" data-field="cant" />
+        <input type="text" placeholder="Ej. Vaso Choco Jelly grande" value="${item.desc}" data-idx="${idx}" data-field="desc" />
+        <input type="number" min="0" step="0.01" placeholder="P. Unit" value="${item.unit}" data-idx="${idx}" data-field="unit" />
+        <button type="button" class="btn-remove" data-idx="${idx}" title="Eliminar fila">×</button>
+      `;
+      itemsList.appendChild(row);
+    });
+
+    itemsList.querySelectorAll("input").forEach((inp) => {
+      inp.addEventListener("input", (e) => {
+        const idx = Number(e.target.dataset.idx);
+        const field = e.target.dataset.field;
+        items[idx][field] = e.target.value;
+        updatePreview();
+      });
+    });
+
+    itemsList.querySelectorAll(".btn-remove").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const idx = Number(e.target.dataset.idx);
+        if (items.length > 1) {
+          items.splice(idx, 1);
+          renderFormItems();
+          updatePreview();
+        }
+      });
+    });
+  }
+
+  // Calcular totales y actualizar vista previa
+  function calculateTotals() {
+    let subtotal = 0;
+    const validRows = [];
+
+    items.forEach((it) => {
+      const c = parseFloat(it.cant);
+      const u = parseFloat(it.unit);
+      const d = (it.desc || "").trim();
+
+      if (d || (!isNaN(c) && !isNaN(u))) {
+        const qty = !isNaN(c) && c > 0 ? c : 0;
+        const price = !isNaN(u) && u >= 0 ? u : 0;
+        const rowTotal = qty * price;
+        subtotal += rowTotal;
+        validRows.push({
+          cant: qty || "",
+          desc: d,
+          unit: price,
+          total: rowTotal
+        });
+      }
+    });
+
+    const rawDisc = Math.max(0, parseFloat(inputDescuento.value) || 0);
+    const discType = selectDescuentoTipo.value;
+    let descuento = discType === "%"
+      ? subtotal * (Math.min(100, rawDisc) / 100)
+      : Math.min(subtotal, rawDisc);
+
+    const envio = Math.max(0, parseFloat(inputEnvio.value) || 0);
+    const total = Math.max(0, subtotal - descuento + envio);
+
+    return { validRows, subtotal, descuento, envio, total, rawDisc, discType };
+  }
+
+  function updatePreview() {
+    document.getElementById("prevFecha").textContent = formatDateDisplay(inputFecha.value);
+    document.getElementById("prevNota").textContent = inputNota.value.trim();
+    document.getElementById("prevCliente").textContent = inputCliente.value.trim();
+    document.getElementById("prevTelefono").textContent = inputTelefono.value.trim();
+
+    const { validRows, subtotal, descuento, envio, total, rawDisc, discType } = calculateTotals();
+
+    const tbody = document.getElementById("prevTableBody");
+    tbody.innerHTML = "";
+
+    // Mantener mínimo 5 filas para conservar la estética exacta de la plantilla
+    const minRows = Math.max(5, validRows.length);
+    for (let i = 0; i < minRows; i++) {
+      const r = validRows[i];
+      const tr = document.createElement("tr");
+      if (r) {
+        tr.innerHTML = `
+          <td class="col-cant">${r.cant}</td>
+          <td class="col-desc">${r.desc}</td>
+          <td class="col-unit">${r.unit > 0 || r.cant ? formatMoney(r.unit) : ""}</td>
+          <td class="col-tot">${r.total > 0 || r.cant ? formatMoney(r.total) : ""}</td>
+        `;
+      } else {
+        tr.innerHTML = `<td class="col-cant"></td><td class="col-desc"></td><td class="col-unit"></td><td class="col-tot"></td>`;
+      }
+      tbody.appendChild(tr);
+    }
+
+    document.getElementById("prevSubtotal").textContent = formatMoney(subtotal);
+    document.getElementById("prevDescuento").textContent =
+      discType === "%" && rawDisc > 0
+        ? `${formatMoney(descuento)} (${rawDisc}%)`
+        : formatMoney(descuento);
+    document.getElementById("prevEnvio").textContent = formatMoney(envio);
+    document.getElementById("prevTotal").textContent = formatMoney(total);
+
+    const firmaImg = document.getElementById("prevFirmaImg");
+    firmaImg.style.visibility = checkFirma.checked ? "visible" : "hidden";
+  }
+
+  // Sincronizar siguiente número correlativo con Google Sheets
+  async function fetchNextNoteNumber() {
+    if (!isSheetsConfigured()) {
+      const savedLocal = localStorage.getItem("choco_jelly_last_nota");
+      if (savedLocal) {
+        inputNota.value = String(parseInt(savedLocal, 10) + 1).padStart(6, "0");
+      }
+      updatePreview();
+      return;
+    }
+
+    syncStatus.textContent = "Sincronizando...";
+    try {
+      const res = await fetch(APPS_SCRIPT_URL);
+      const data = await res.json();
+      if (data.status === "ok" && data.nextNumber) {
+        inputNota.value = data.nextNumber;
+        syncStatus.textContent = "Sheets Conectado";
+        syncStatus.classList.add("connected");
+        updatePreview();
+      }
+    } catch (err) {
+      syncStatus.textContent = "Error de red";
+      console.error(err);
+    }
+  }
+
+  // Guardar venta en Google Sheets
+  async function saveToGoogleSheets() {
+    const { validRows, subtotal, descuento, envio, total } = calculateTotals();
+    const detalleTexto = validRows
+      .map((r) => `${r.cant}x ${r.desc} ($${r.unit.toFixed(2)}) = $${r.total.toFixed(2)}`)
+      .join(" | ");
+
+    const payload = {
+      numeroNota: inputNota.value.trim().padStart(6, "0"),
+      fecha: formatDateDisplay(inputFecha.value),
+      cliente: inputCliente.value.trim() || "Consumidor Final",
+      telefono: inputTelefono.value.trim(),
+      detalleTexto,
+      subtotal,
+      descuento,
+      envio,
+      total
+    };
+
+    if (!isSheetsConfigured()) {
+      localStorage.setItem("choco_jelly_last_nota", payload.numeroNota);
+      statusMsg.style.color = "#856404";
+      statusMsg.textContent = "Archivo generado (Configura APPS_SCRIPT_URL para guardar en Google Sheets).";
+      return true;
+    }
+
+    statusMsg.style.color = "#555";
+    statusMsg.textContent = "Guardando venta en Google Sheets...";
+
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (result.status === "ok") {
+      statusMsg.style.color = "#155724";
+      statusMsg.textContent = `✓ Nota N° ${payload.numeroNota} registrada en Google Sheets.`;
+      if (result.nextNumber) {
+        inputNota.value = result.nextNumber;
+      }
+      return true;
+    } else {
+      throw new Error(result.message || "Error al guardar");
+    }
+  }
+
+  // Renderizar el lienzo a alta resolución
+  async function captureReceiptCanvas() {
+    const node = document.getElementById("nota-canvas");
+    return await html2canvas(node, {
+      scale: 2.5,
+      useCORS: true,
+      backgroundColor: "#f9f5eb"
+    });
+  }
+
+  function getFileName(ext) {
+    const num = (inputNota.value.trim() || "000065").padStart(6, "0");
+    const clientSlug = (inputCliente.value.trim() || "Cliente")
+      .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, "")
+      .trim()
+      .replace(/\s+/g, "_");
+    return `Nota_Venta_${num}_${clientSlug}.${ext}`;
+  }
+
+  async function downloadPNG() {
+    const canvas = await captureReceiptCanvas();
+    const link = document.createElement("a");
+    link.download = getFileName("png");
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
+  async function downloadPDF() {
+    const canvas = await captureReceiptCanvas();
+    const imgData = canvas.toDataURL("image/png");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [800, 840]
+    });
+    pdf.addImage(imgData, "PNG", 0, 0, 800, 840);
+    pdf.save(getFileName("pdf"));
+  }
+
+  async function handleSaveAndExport(format) {
+    const btnPng = document.getElementById("btnSavePng");
+    const btnPdf = document.getElementById("btnSavePdf");
+    btnPng.disabled = true;
+    btnPdf.disabled = true;
+
+    try {
+      if (format === "png") await downloadPNG();
+      if (format === "pdf") await downloadPDF();
+
+      await saveToGoogleSheets();
+      updatePreview();
+    } catch (err) {
+      statusMsg.style.color = "#c92a5b";
+      statusMsg.textContent = "Error al conectar con Google Sheets: " + err.message;
+    } finally {
+      btnPng.disabled = false;
+      btnPdf.disabled = false;
+    }
+  }
+
+  // Eventos
+  document.getElementById("btnAddItem").addEventListener("click", () => {
+    items.push({ cant: 1, desc: "", unit: "" });
+    renderFormItems();
+  });
+
+  document.getElementById("btnSavePng").addEventListener("click", () => handleSaveAndExport("png"));
+  document.getElementById("btnSavePdf").addEventListener("click", () => handleSaveAndExport("pdf"));
+  document.getElementById("btnOnlyPng").addEventListener("click", downloadPNG);
+  document.getElementById("btnOnlyPdf").addEventListener("click", downloadPDF);
+  document.getElementById("btnRefreshNum").addEventListener("click", fetchNextNoteNumber);
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    inputCliente.value = "";
+    inputTelefono.value = "";
+    inputDescuento.value = "0";
+    inputEnvio.value = "0";
+    items = [{ cant: 1, desc: "", unit: "" }, { cant: "", desc: "", unit: "" }];
+    statusMsg.textContent = "";
+    setTodayDate();
+    renderFormItems();
+    fetchNextNoteNumber();
+  });
+
+  [inputNota, inputFecha, inputCliente, inputTelefono, inputDescuento, selectDescuentoTipo, inputEnvio, checkFirma].forEach((el) => {
+    el.addEventListener("input", updatePreview);
+    el.addEventListener("change", updatePreview);
+  });
+
+  // Inicio
+  setTodayDate();
+  renderFormItems();
+  updatePreview();
+  fetchNextNoteNumber();
+</script>
+</body>
+</html>
