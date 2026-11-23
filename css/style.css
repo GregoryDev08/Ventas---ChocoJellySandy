@@ -104,6 +104,99 @@ body {
   margin-top: 10px;
 }
 
+.history-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 940px;
+  max-height: 85vh;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.history-header h2 {
+  font-size: 1.25rem;
+  color: var(--primary-dark);
+}
+
+.history-summary {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #155724;
+  margin-top: 2px;
+}
+
+.history-header-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.history-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.history-table th {
+  background: #fdf2f6;
+  color: var(--primary-dark);
+  padding: 10px 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f2ecee;
+  vertical-align: middle;
+}
+
+.history-table tr:hover td {
+  background: #fcf9fa;
+}
+
+.btn-del-row {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 7px;
+  background: #fde8ee;
+  color: #c92a5b;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-del-row:hover {
+  background: #fbd0dc;
+}
+
+.btn-del-row:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .app-container {
   max-width: 1440px;
   margin: 0 auto;
@@ -138,7 +231,7 @@ body {
 }
 
 .panel-header h1 {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--primary-dark);
 }
@@ -150,8 +243,8 @@ body {
 }
 
 .sync-badge {
-  font-size: 0.75rem;
-  padding: 5px 10px;
+  font-size: 0.72rem;
+  padding: 5px 9px;
   border-radius: 999px;
   font-weight: 600;
   background: #d4edda;

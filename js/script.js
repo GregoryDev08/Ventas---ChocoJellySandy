@@ -15,6 +15,13 @@ const btnUnlock = document.getElementById("btnUnlock");
 const lockError = document.getElementById("lockError");
 const btnLockApp = document.getElementById("btnLockApp");
 
+const historyModal = document.getElementById("historyModal");
+const historySummary = document.getElementById("historySummary");
+const historyTableBody = document.getElementById("historyTableBody");
+const btnOpenHistory = document.getElementById("btnOpenHistory");
+const btnCloseHistory = document.getElementById("btnCloseHistory");
+const btnRenumber = document.getElementById("btnRenumber");
+
 const inputNota = document.getElementById("inputNota");
 const inputFecha = document.getElementById("inputFecha");
 const inputCliente = document.getElementById("inputCliente");
@@ -73,7 +80,7 @@ async function verifyPinAndSync(pinToTest) {
         signatureLoaded = false;
       }
 
-      syncStatus.textContent = "Sheets Conectado";
+      syncStatus.textContent = "Conectado";
       lockScreen.classList.add("hidden");
       updatePreview();
       return true;
@@ -98,8 +105,123 @@ function lockSystem() {
   sessionStorage.removeItem("cjs_auth_pin");
   pinInput.value = "";
   lockError.textContent = "";
+  historyModal.classList.add("hidden");
   lockScreen.classList.remove("hidden");
   pinInput.focus();
+}
+
+function renderHistoryTable(records) {
+  historyTableBody.innerHTML = "";
+  if (!records || records.length === 0) {
+    historySummary.textContent = "No hay registros almacenados.";
+    historyTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#6b6367;padding:20px;">Sin registros aún</td></tr>`;
+    return;
+  }
+
+  const totalGanancias = records.reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+  historySummary.textContent = `Total registros: ${records.length} | Ganancias acumuladas: $${totalGanancias.toFixed(2)}`;
+
+  records.forEach((rec) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${rec.numeroNota}</strong></td>
+      <td>${rec.fecha}</td>
+      <td>${rec.cliente}</td>
+      <td>${rec.detalle || "-"}</td>
+      <td><strong>$${Number(rec.total).toFixed(2)}</strong></td>
+      <td>
+        <button type="button" class="btn-del-row" data-row="${rec.rowIndex}" data-nota="${rec.numeroNota}">Eliminar</button>
+      </td>
+    `;
+    historyTableBody.appendChild(tr);
+  });
+
+  historyTableBody.querySelectorAll(".btn-del-row").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const target = e.currentTarget;
+      const rowIndex = Number(target.dataset.row);
+      const numeroNota = target.dataset.nota;
+      if (!confirm(`¿Eliminar definitivamente la Nota N° ${numeroNota}?`)) return;
+      target.disabled = true;
+      target.textContent = "...";
+      await deleteRecordFromSheets(rowIndex, numeroNota);
+    });
+  });
+}
+
+async function openHistoryModal() {
+  if (!activePin) return;
+  historyModal.classList.remove("hidden");
+  historySummary.textContent = "Cargando registros desde Google Sheets...";
+  historyTableBody.innerHTML = "";
+
+  try {
+    const url = `${APPS_SCRIPT_URL}?pin=${encodeURIComponent(activePin)}&action=list`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.status === "ok") {
+      renderHistoryTable(data.records);
+      if (data.nextNumber) {
+        inputNota.value = data.nextNumber;
+        updatePreview();
+      }
+    } else {
+      historySummary.textContent = "Error al cargar registros.";
+    }
+  } catch (err) {
+    historySummary.textContent = "Error de conexión con Google Sheets.";
+  }
+}
+
+async function deleteRecordFromSheets(rowIndex, numeroNota) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        pin: activePin,
+        action: "delete",
+        rowIndex,
+        numeroNota,
+        renumber: false
+      })
+    });
+    const result = await res.json();
+    if (result.status === "ok") {
+      renderHistoryTable(result.records);
+      if (result.nextNumber) {
+        inputNota.value = result.nextNumber;
+        updatePreview();
+      }
+    }
+  } catch (err) {
+    alert("Error al eliminar el registro.");
+  }
+}
+
+async function renumberRecordsInSheets() {
+  if (!confirm("¿Reordenar todos los números de nota consecutivamente desde 000065?")) return;
+  btnRenumber.disabled = true;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        pin: activePin,
+        action: "renumber"
+      })
+    });
+    const result = await res.json();
+    if (result.status === "ok") {
+      renderHistoryTable(result.records);
+      if (result.nextNumber) {
+        inputNota.value = result.nextNumber;
+        updatePreview();
+      }
+    }
+  } finally {
+    btnRenumber.disabled = false;
+  }
 }
 
 btnUnlock.addEventListener("click", () => verifyPinAndSync(pinInput.value.trim()));
@@ -107,6 +229,9 @@ pinInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") verifyPinAndSync(pinInput.value.trim());
 });
 btnLockApp.addEventListener("click", lockSystem);
+btnOpenHistory.addEventListener("click", openHistoryModal);
+btnCloseHistory.addEventListener("click", () => historyModal.classList.add("hidden"));
+btnRenumber.addEventListener("click", renumberRecordsInSheets);
 
 inputTelefono.addEventListener("input", () => {
   if (!whatsappManuallyEdited) {
@@ -273,6 +398,7 @@ async function saveToGoogleSheets() {
 
   const payload = {
     pin: activePin,
+    action: "create",
     numeroNota: inputNota.value.trim().padStart(6, "0"),
     fecha: formatDateDisplay(inputFecha.value),
     cliente: inputCliente.value.trim() || "Consumidor Final",
@@ -437,7 +563,8 @@ async function sendViaWhatsApp(shouldSaveFirst) {
 
     triggerBlobDownload(fileBlob, filename);
 
-    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;    window.open(waUrl, "_blank");
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank");
 
     statusMsg.style.color = "#155724";
     statusMsg.textContent = copiedToClipboard

@@ -24,13 +24,44 @@
     </div>
   </div>
 
+  <div id="historyModal" class="lock-overlay hidden">
+    <div class="history-card">
+      <div class="history-header">
+        <div>
+          <h2>Historial y Reporte Rápido</h2>
+          <p id="historySummary" class="history-summary">Cargando registros...</p>
+        </div>
+        <div class="history-header-btns">
+          <button type="button" id="btnRenumber" class="btn-ghost">Reordenar N°</button>
+          <button type="button" id="btnCloseHistory" class="btn-lock-small">✕ Cerrar</button>
+        </div>
+      </div>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>N° Nota</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Detalle</th>
+              <th>Total</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
     <section class="editor-panel">
       <div class="panel-header">
         <h1>Choco Jelly Sandy</h1>
         <div class="header-actions">
           <span id="syncStatus" class="sync-badge">Bloqueado</span>
-          <button type="button" id="btnLockApp" class="btn-lock-small" title="Cerrar sesión y bloquear">🔒 Salir</button>
+          <button type="button" id="btnOpenHistory" class="btn-lock-small" title="Ver ventas y borrar pruebas">Historial</button>
+          <button type="button" id="btnLockApp" class="btn-lock-small" title="Cerrar sesión y bloquear">🔒</button>
         </div>
       </div>
 
