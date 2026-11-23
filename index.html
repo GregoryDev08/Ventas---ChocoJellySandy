@@ -34,6 +34,85 @@
       padding: 20px;
     }
 
+    /* PANTALLA DE BLOQUEO POR PIN */
+    .lock-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(35, 31, 32, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .lock-overlay.hidden {
+      display: none;
+    }
+
+    .lock-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 380px;
+      border-radius: 20px;
+      padding: 32px 28px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+    }
+
+    .lock-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #fdf2f6;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 14px;
+    }
+
+    .lock-card h2 {
+      font-size: 1.35rem;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+
+    .lock-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .pin-input {
+      text-align: center;
+      font-size: 1.5rem;
+      letter-spacing: 0.35em;
+      font-weight: 700;
+      padding: 12px;
+      margin-bottom: 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      outline: none;
+    }
+
+    .pin-input:focus {
+      border-color: var(--primary);
+    }
+
+    .lock-error {
+      color: #c92a5b;
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-height: 20px;
+      margin-top: 10px;
+    }
+
     .app-container {
       max-width: 1440px;
       margin: 0 auto;
@@ -65,28 +144,45 @@
       margin-bottom: 18px;
       padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      gap: 10px;
+      gap: 8px;
     }
 
     .panel-header h1 {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: var(--primary-dark);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .sync-badge {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       padding: 5px 10px;
       border-radius: 999px;
       font-weight: 600;
-      background: #fff3cd;
-      color: #856404;
+      background: #d4edda;
+      color: #155724;
       white-space: nowrap;
     }
 
-    .sync-badge.connected {
-      background: #d4edda;
-      color: #155724;
+    .btn-lock-small {
+      font-size: 0.75rem;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #faf7f9;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-lock-small:hover {
+      background: #fde8ee;
+      color: #c92a5b;
     }
 
     .form-grid {
@@ -156,7 +252,6 @@
       align-items: center;
     }
 
-    /* LISTA DE PRODUCTOS */
     .items-list {
       display: flex;
       flex-direction: column;
@@ -230,7 +325,6 @@
       accent-color: var(--primary);
     }
 
-    /* BOTONES DE ACCIÓN */
     .actions-stack {
       display: flex;
       flex-direction: column;
@@ -238,6 +332,7 @@
     }
 
     .btn-primary {
+      width: 100%;
       padding: 13px 16px;
       border: none;
       border-radius: 10px;
@@ -247,7 +342,7 @@
       font-size: 0.98rem;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      transition: background 0.2s;
     }
 
     .btn-primary:hover {
@@ -327,7 +422,6 @@
       letter-spacing: 0.05em;
     }
 
-    /* LIENZO DE NOTA DE VENTA (800 x 840 px) */
     #nota-canvas {
       width: 800px;
       height: 840px;
@@ -396,7 +490,6 @@
     .val-cliente { flex: 1; }
     .val-telefono { width: 225px; }
 
-    /* TABLA DE PRODUCTOS */
     .receipt-table {
       width: 100%;
       border-collapse: collapse;
@@ -427,7 +520,6 @@
     .col-unit { width: 132px; text-align: right; }
     .col-tot  { width: 112px; text-align: right; }
 
-    /* BLOQUE DE TOTALES */
     .totals-wrapper {
       display: flex;
       justify-content: flex-end;
@@ -469,7 +561,6 @@
       padding-top: 4px;
     }
 
-    /* PIE DE NOTA Y FIRMA */
     .receipt-footer {
       text-align: center;
       margin-top: 8px;
@@ -511,12 +602,27 @@
 </head>
 <body>
 
+<!-- PANTALLA DE BLOQUEO -->
+<div id="lockScreen" class="lock-overlay">
+  <div class="lock-card">
+    <div class="lock-icon">🔒</div>
+    <h2>Choco Jelly Sandy</h2>
+    <p>Ingresa tu PIN de seguridad para emitir notas de venta</p>
+    <input type="password" inputmode="numeric" id="pinInput" class="pin-input" placeholder="••••" maxlength="10" autocomplete="off" />
+    <button type="button" id="btnUnlock" class="btn-primary">Desbloquear Sistema</button>
+    <div id="lockError" class="lock-error"></div>
+  </div>
+</div>
+
 <div class="app-container">
   <!-- FORMULARIO DE CAPTURA -->
   <section class="editor-panel">
     <div class="panel-header">
       <h1>Choco Jelly Sandy</h1>
-      <span id="syncStatus" class="sync-badge">Modo Local</span>
+      <div class="header-actions">
+        <span id="syncStatus" class="sync-badge">Bloqueado</span>
+        <button type="button" id="btnLockApp" class="btn-lock-small" title="Cerrar sesión y bloquear">🔒 Salir</button>
+      </div>
     </div>
 
     <div class="form-grid">
@@ -656,7 +762,7 @@
       <div class="receipt-footer">
         <div class="thanks-text">¡Gracias por endulzar tu día con nosotros!</div>
         <div class="signature-box">
-          <img src="assets/firma.png" alt="Firma" class="signature-img" id="prevFirmaImg" onerror="this.style.visibility='hidden'" />
+          <img alt="Firma" class="signature-img" id="prevFirmaImg" style="visibility: hidden;" />
           <div class="signature-line">Firma Autorizada</div>
         </div>
       </div>
@@ -668,18 +774,23 @@
   // =========================================================================
   // CONFIGURACIÓN: Pega aquí la URL de tu implementación de Google Apps Script
   // =========================================================================
-  const APPS_SCRIPT_URL = "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlLTBUW6NS324pI-awMIWvzx7LTzmWLRlkZdjiZrG9u-2m7lM96-o-ItBOf3Htw-ecwQ/exec";
 
-  const isSheetsConfigured = () =>
-    APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith("https://script.google.com/");
+  let activePin = "";
+  let signatureLoaded = false;
 
-  // Estado inicial
   let items = [
     { cant: 1, desc: "", unit: "" },
     { cant: "", desc: "", unit: "" }
   ];
 
-  // Elementos del DOM
+  // Referencias DOM
+  const lockScreen = document.getElementById("lockScreen");
+  const pinInput = document.getElementById("pinInput");
+  const btnUnlock = document.getElementById("btnUnlock");
+  const lockError = document.getElementById("lockError");
+  const btnLockApp = document.getElementById("btnLockApp");
+
   const inputNota = document.getElementById("inputNota");
   const inputFecha = document.getElementById("inputFecha");
   const inputCliente = document.getElementById("inputCliente");
@@ -691,8 +802,87 @@
   const itemsList = document.getElementById("itemsList");
   const statusMsg = document.getElementById("statusMsg");
   const syncStatus = document.getElementById("syncStatus");
+  const prevFirmaImg = document.getElementById("prevFirmaImg");
 
-  // Inicializar fecha de hoy
+  // Validar PIN contra Google Apps Script
+  async function verifyPinAndSync(pinToTest) {
+    if (!pinToTest) {
+      lockError.textContent = "Ingresa un PIN.";
+      return false;
+    }
+
+    btnUnlock.disabled = true;
+    btnUnlock.textContent = "Verificando...";
+    lockError.textContent = "";
+
+    try {
+      const url = `${APPS_SCRIPT_URL}?pin=${encodeURIComponent(pinToTest)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.status === "unauthorized") {
+        sessionStorage.removeItem("cjs_auth_pin");
+        activePin = "";
+        lockError.textContent = "PIN incorrecto. Inténtalo de nuevo.";
+        pinInput.value = "";
+        pinInput.focus();
+        return false;
+      }
+
+      if (data.status === "ok") {
+        activePin = pinToTest;
+        sessionStorage.setItem("cjs_auth_pin", pinToTest);
+
+        if (data.nextNumber) {
+          inputNota.value = data.nextNumber;
+        }
+
+        // Cargar firma privada entregada por Google Drive
+        if (data.signature) {
+          prevFirmaImg.src = data.signature;
+          signatureLoaded = true;
+        } else {
+          // Respaldo opcional si aún conservas assets/firma.png
+          prevFirmaImg.src = "assets/firma.png";
+          prevFirmaImg.onload = () => { signatureLoaded = true; updatePreview(); };
+          prevFirmaImg.onerror = () => { signatureLoaded = false; updatePreview(); };
+        }
+
+        syncStatus.textContent = "Sheets Conectado";
+        lockScreen.classList.add("hidden");
+        updatePreview();
+        return true;
+      } else {
+        lockError.textContent = "Error del servidor: " + (data.message || "Desconocido");
+        return false;
+      }
+    } catch (err) {
+      lockError.textContent = "No se pudo conectar con Google Sheets.";
+      return false;
+    } finally {
+      btnUnlock.disabled = false;
+      btnUnlock.textContent = "Desbloquear Sistema";
+    }
+  }
+
+  function lockSystem() {
+    activePin = "";
+    signatureLoaded = false;
+    prevFirmaImg.removeAttribute("src");
+    prevFirmaImg.style.visibility = "hidden";
+    sessionStorage.removeItem("cjs_auth_pin");
+    pinInput.value = "";
+    lockError.textContent = "";
+    lockScreen.classList.remove("hidden");
+    pinInput.focus();
+  }
+
+  btnUnlock.addEventListener("click", () => verifyPinAndSync(pinInput.value.trim()));
+  pinInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") verifyPinAndSync(pinInput.value.trim());
+  });
+  btnLockApp.addEventListener("click", lockSystem);
+
   function setTodayDate() {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -711,7 +901,6 @@
     return `$ ${Number(val || 0).toFixed(2)}`;
   }
 
-  // Renderizar filas editables del formulario
   function renderFormItems() {
     itemsList.innerHTML = "";
     items.forEach((item, idx) => {
@@ -747,7 +936,6 @@
     });
   }
 
-  // Calcular totales y actualizar vista previa
   function calculateTotals() {
     let subtotal = 0;
     const validRows = [];
@@ -794,7 +982,6 @@
     const tbody = document.getElementById("prevTableBody");
     tbody.innerHTML = "";
 
-    // Mantener mínimo 5 filas para conservar la estética exacta de la plantilla
     const minRows = Math.max(5, validRows.length);
     for (let i = 0; i < minRows; i++) {
       const r = validRows[i];
@@ -820,45 +1007,22 @@
     document.getElementById("prevEnvio").textContent = formatMoney(envio);
     document.getElementById("prevTotal").textContent = formatMoney(total);
 
-    const firmaImg = document.getElementById("prevFirmaImg");
-    firmaImg.style.visibility = checkFirma.checked ? "visible" : "hidden";
+    prevFirmaImg.style.visibility = checkFirma.checked && signatureLoaded ? "visible" : "hidden";
   }
 
-  // Sincronizar siguiente número correlativo con Google Sheets
-  async function fetchNextNoteNumber() {
-    if (!isSheetsConfigured()) {
-      const savedLocal = localStorage.getItem("choco_jelly_last_nota");
-      if (savedLocal) {
-        inputNota.value = String(parseInt(savedLocal, 10) + 1).padStart(6, "0");
-      }
-      updatePreview();
-      return;
-    }
-
-    syncStatus.textContent = "Sincronizando...";
-    try {
-      const res = await fetch(APPS_SCRIPT_URL);
-      const data = await res.json();
-      if (data.status === "ok" && data.nextNumber) {
-        inputNota.value = data.nextNumber;
-        syncStatus.textContent = "Sheets Conectado";
-        syncStatus.classList.add("connected");
-        updatePreview();
-      }
-    } catch (err) {
-      syncStatus.textContent = "Error de red";
-      console.error(err);
-    }
-  }
-
-  // Guardar venta en Google Sheets
   async function saveToGoogleSheets() {
+    if (!activePin) {
+      lockSystem();
+      throw new Error("Sesión bloqueada. Ingresa tu PIN.");
+    }
+
     const { validRows, subtotal, descuento, envio, total } = calculateTotals();
     const detalleTexto = validRows
       .map((r) => `${r.cant}x ${r.desc} ($${r.unit.toFixed(2)}) = $${r.total.toFixed(2)}`)
       .join(" | ");
 
     const payload = {
+      pin: activePin,
       numeroNota: inputNota.value.trim().padStart(6, "0"),
       fecha: formatDateDisplay(inputFecha.value),
       cliente: inputCliente.value.trim() || "Consumidor Final",
@@ -870,13 +1034,6 @@
       total
     };
 
-    if (!isSheetsConfigured()) {
-      localStorage.setItem("choco_jelly_last_nota", payload.numeroNota);
-      statusMsg.style.color = "#856404";
-      statusMsg.textContent = "Archivo generado (Configura APPS_SCRIPT_URL para guardar en Google Sheets).";
-      return true;
-    }
-
     statusMsg.style.color = "#555";
     statusMsg.textContent = "Guardando venta en Google Sheets...";
 
@@ -887,6 +1044,11 @@
     });
 
     const result = await res.json();
+    if (result.status === "unauthorized") {
+      lockSystem();
+      throw new Error("PIN inválido o modificado.");
+    }
+
     if (result.status === "ok") {
       statusMsg.style.color = "#155724";
       statusMsg.textContent = `✓ Nota N° ${payload.numeroNota} registrada en Google Sheets.`;
@@ -899,7 +1061,6 @@
     }
   }
 
-  // Renderizar el lienzo a alta resolución
   async function captureReceiptCanvas() {
     const node = document.getElementById("nota-canvas");
     return await html2canvas(node, {
@@ -946,21 +1107,19 @@
     btnPdf.disabled = true;
 
     try {
+      await saveToGoogleSheets();
       if (format === "png") await downloadPNG();
       if (format === "pdf") await downloadPDF();
-
-      await saveToGoogleSheets();
       updatePreview();
     } catch (err) {
       statusMsg.style.color = "#c92a5b";
-      statusMsg.textContent = "Error al conectar con Google Sheets: " + err.message;
+      statusMsg.textContent = "Error: " + err.message;
     } finally {
       btnPng.disabled = false;
       btnPdf.disabled = false;
     }
   }
 
-  // Eventos
   document.getElementById("btnAddItem").addEventListener("click", () => {
     items.push({ cant: 1, desc: "", unit: "" });
     renderFormItems();
@@ -970,7 +1129,7 @@
   document.getElementById("btnSavePdf").addEventListener("click", () => handleSaveAndExport("pdf"));
   document.getElementById("btnOnlyPng").addEventListener("click", downloadPNG);
   document.getElementById("btnOnlyPdf").addEventListener("click", downloadPDF);
-  document.getElementById("btnRefreshNum").addEventListener("click", fetchNextNoteNumber);
+  document.getElementById("btnRefreshNum").addEventListener("click", () => verifyPinAndSync(activePin));
 
   document.getElementById("btnReset").addEventListener("click", () => {
     inputCliente.value = "";
@@ -981,7 +1140,7 @@
     statusMsg.textContent = "";
     setTodayDate();
     renderFormItems();
-    fetchNextNoteNumber();
+    verifyPinAndSync(activePin);
   });
 
   [inputNota, inputFecha, inputCliente, inputTelefono, inputDescuento, selectDescuentoTipo, inputEnvio, checkFirma].forEach((el) => {
@@ -993,7 +1152,13 @@
   setTodayDate();
   renderFormItems();
   updatePreview();
-  fetchNextNoteNumber();
+
+  const savedSessionPin = sessionStorage.getItem("cjs_auth_pin");
+  if (savedSessionPin) {
+    verifyPinAndSync(savedSessionPin);
+  } else {
+    pinInput.focus();
+  }
 </script>
 </body>
 </html>
